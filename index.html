@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-   <meta charset="utf-8" http-equiv="content-type" content="text/html;charset=utf-8"/>
-   <meta name="viewport" content="initial-scale=1.0, width=device-width">
-   <meta name="google" content="notranslate">
-   <script type="module">
-      import {Neuron, Net, NetWebGL2} from "./neunet.js";
-      window.Neuron = Neuron;
-      window.Net = Net;
-      window.NetWebGL2 = NetWebGL2;
-		</script>
-   <style>
+    <meta charset="utf-8" http-equiv="content-type" content="text/html;charset=utf-8"/>
+    <meta name="viewport" content="initial-scale=1.0, width=device-width">
+    <meta name="google" content="notranslate">
+    <script type="module">
+      import { Sourcerer } from "./sourcerer.js";
+      window.Sourcerer = Sourcerer;
+    </script>
+    <style>
     html {
       font-family: monospace;
       color: #ccc;
@@ -27,7 +25,7 @@
       color: #fa0;
     }
    </style>
-   <script defer src="performance_test_webgl2.js"></script>
+   <script defer src="test.js"></script>
   </head>
   <body style="white-space: pre;"></body>
 </html>
