@@ -4,43 +4,29 @@ import { Math } from './math.js';
 
 export class Fourier {
 
-    static DFT (real, img = [], inverse = false) {
-        if (img.length === 0) img = new Array(real.length).fill(0);
-        let pre = 2 * Math.PI / real.length;
-        if (inverse) pre *= -1;
+    static DFT (real, img = new Array(real.length).fill(0), inverse = false) {
+        let pre = ((inverse) ? - 2 : 2) * Math.PI / real.length;
         // Approximate integral
-        let R = real.map((e, i) => real.reduce((p, r, j) => p + Math.cos(i * j * pre) * r - Math.sin(i * j * pre) * img[j], 0) / real.length);
-        let I = real.map((e, i) => real.reduce((p, r, j) => p + Math.sin(i * j * pre) * r + Math.cos(i * j * pre) * img[j], 0) / real.length);
-        return { R: R, I: I };
+        let f = (c, s) => real.map((e, i) => c.reduce((p, r, j) => {
+            return p + Math.cos(i * j * pre) * r + Math.sin(i * j * pre) * s[j] }, 0) / real.length);
+        return { R: f (real, img.map((item) => - item )), I: f (img, real) };
     }
 
-    static FFT (real, img = [], inverse = false) {
-        if (real.length % 2 !== 0) console.warn("Input length is not a power of 2!");
-        else if (real.length <= 2) return Fourier.DFT(real, img, inverse);
-        else {
-            if (img.length === 0) img = new Array(real.length).fill(0);
-            let even = Fourier.FFT(real.filter((item, i) => i % 2 === 0), img.filter((item, i) => i % 2 === 0), inverse); 
-            let odd = Fourier.FFT(real.filter((item, i) => i % 2 !== 0), img.filter((item, i) => i % 2 !== 0), inverse);
-            let pre = 2 * Math.PI / real.length;
-            if (inverse) pre *= -1;
-            // Calculate common sine and cosine's
-            let cReal = real.map((e, i) => Math.cos(i * pre));
-            let cImg = real.map((e, i) => Math.sin(i * pre));
-
-            let R = []; let I = [];
-            for (let i = 0; i < real.length; i++) {
-                let mod = i % (real.length / 2);
-                R.push((even.R[mod] + cReal[i] * odd.R[mod] - cImg[i] * odd.I[mod]) * 0.5);
-                I.push((even.I[mod] + cReal[i] * odd.I[mod] + cImg[i] * odd.R[mod]) * 0.5);
-            }
-            return { R: R, I: I };
-        }
+    static async FFT (real, img = [], inverse = false) {
+        return new Promise(function(resolve) {
+            const worker = new Worker('fourierWorker.js');
+            worker.postMessage({real: real, img: img, inverse: inverse, depth: 0, maxDepth: Math.log2(navigator.hardwareConcurrency)});
+            worker.onmessage = function (e) { resolve(e.data) };
+        });
     }
 
-    static lossyFFT (real, img = [], loss) {
+    static async lossyFFT (real, img = [], loss) {
         if (img.length === 0) img = new Array(real.length).fill(0);
-        const f = Fourier.FFT(real, img);
+
+        const f = await Fourier.FFT(real, img);
+
         let amplitudes = [];
+        console.log(f);
         for (let i = 0; i < real.length; i++) {
             const amplitude = Math.stabilize(Math.sqrt(f.R[i] ** 2 + f.I[i] ** 2));
             amplitudes.push(amplitude);
@@ -61,7 +47,7 @@ export class Fourier {
         return filteredF;
     }
 
-    static inverse (fourier, length) {
+    static async inverse (fourier, length) {
         let newF = {R: [], I: []};
         let counter = 0;
         for (let i = 0; i < length; i++) {
@@ -74,7 +60,7 @@ export class Fourier {
                 newF.I.push(0);
             }
         }
-        let f = Fourier.FFT(newF.R, newF.I, true);
+        let f = await Fourier.FFT(newF.R, newF.I, true);
         f.R = f.R.map((item, i) => item * length);
         return f;
     }

@@ -1,4 +1,4 @@
-'use-strict';
+'use strict';
 
 import { GLLib } from './gllib.js';
 import { Math } from './math.js';
