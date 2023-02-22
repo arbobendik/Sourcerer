@@ -162,8 +162,8 @@ export class Net {
 
 export class NetWebGL2 {
   // Create webgl context necessary for hardware acceleration.
-  canvas = document.createElement("canvas");
-  gl = this.canvas.getContext("webgl2");
+  canvas = document.createElement('canvas');
+  gl = this.canvas.getContext('webgl2');
 
   forward = {};
   backward = {};
@@ -715,7 +715,7 @@ export class NetWebGL2 {
         // Apply dx values to neural layer texture.
         this.neurons[i][j / 4] = GLLib.toFloat([results[j], results[j + 1], results[j + 2], results[j + 3]]);
       }
-      // console.log("neurons: ", net.neurons[i]);
+      // console.log('neurons: ', net.neurons[i]);
       // Rescale canvas for error summing pass.
       this.canvas.width = this.structure[i];
       this.canvas.height = 1;
