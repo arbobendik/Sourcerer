@@ -2,7 +2,7 @@
 
 import { ImgLib } from './imgLib.js';
 import { Fourier } from './fourier.js';
-import { NetWebGL2 } from './neunet.js';
+import { Net } from './neunet.js';
 
 export class Sourcerer {
     width;
@@ -11,12 +11,30 @@ export class Sourcerer {
 
     imgLib;
     fourier;
+    net;
 
-    constructor (width, height, loss) {
+    batchLength;
+    trainingBatches;
+    hiddenLayers = [];
+
+    constructor (width, height, loss, trainingBatches = 8, hiddenLayers = [2048, 2048, 2048]) {
         this.width = width;
         this.height = height;
         this.loss = loss;
         this.fourier = Fourier;
-        this.imgLib = new ImgLib (this);
+        this.imgLib = ImgLib;
+        this.batchLength = width;
+        this.trainingBatches = trainingBatches;
+        this.net = new Net([batchLength * trainingBatches, ...hiddenLayers, width]);
+    }
+
+    async train () {
+        // Fourier transform image
+        // Create filtered version
+        // Train ANN with filtered Fourier as input and full fourier as output
+    }
+
+    async upscale () {
+
     }
 }
