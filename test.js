@@ -15,43 +15,114 @@ let printImg = async (image) => {
   });
 }
 
-let genImg = async (image, size, ratio, dct = true) => {
+let genImg = async (image, size, loss, dct = true) => {
   let counter = processCounter++;
-  let sourcerer = new Sourcerer(size, size, ratio);
+  let sourcerer = new Sourcerer(size, size, loss);
 
-  let imgArray = Array.from(sourcerer.imgLib.toBitMap(image));
+  let imgArray = Array.from(sourcerer.imgLib.toBitMap(image, size, size));
+
   console.time('process_' + counter);
   console.time('compression_' + counter);
   console.log('%cstart decomposing', 'color: #6f6fff');
-  let fourier = dct ? await sourcerer.fourier.lossyDCT(imgArray, ratio)
-                    : await sourcerer.fourier.lossyFFT(imgArray, [], ratio);
+  let fourier;
+  if (dct) {
+    fourier = await sourcerer.fourier.lossyDCT(imgArray, loss)
+  } else {
+    fourier = await sourcerer.fourier.lossyFFT(imgArray, [], loss);
+  }
   console.log('%cfinished decomposing', 'color: #6f6fff');
   console.timeEnd('compression_' + counter);
 
   console.log(fourier);
 
   console.time('extraction_' + counter);
-  console.log('Compressed to a length of:', fourier.R.length);
+  console.log('Compressed to a length of:', fourier.length);
   console.log('%cstarting extraction', 'color: #ff6f6f');
-  let compressedArray = dct ? await sourcerer.fourier.inverseDCT(fourier, imgArray.length)
-                            : (await sourcerer.fourier.inverse(fourier, imgArray.length)).R;
+  let compressedArray;
+  if (dct) {
+    compressedArray = await sourcerer.fourier.IDCT(fourier, imgArray.length);
+  } else {
+    compressedArray = (await sourcerer.fourier.IFFT(fourier, imgArray.length)).R;
+  }
+  
   console.log('%cfinished extraction', 'color: #ff6f6f');
   console.timeEnd('extraction_' + counter);
   console.timeEnd('process_' + counter);
 
-  // console.log(imgArray.length, compressedArray.length);
+  console.log(compressedArray);
 
-  return await sourcerer.imgLib.fromBitMap(compressedArray);
+  return await sourcerer.imgLib.fromBitMap(compressedArray, size, size);
 }
 
 let image = new Image();
-image.src = 'images/a.jpg';
+image.src = 'images/erina.jpg';
 
 image.onload = async () => {
-  // printImg(await genImg(image, 256, 2 ** (- 4)));
-  printImg(await genImg(image, 2048, 2 ** (- 10), true));
-  printImg(await genImg(image, 2048, 2 ** (- 10), false));
-  // printImg(await genImgDCT(image, 256, 2 ** (- 4)));
-  // printImg(await genImg(image, 1024, 2 ** (- 10)));
+  let size = 1024;
+  // await printImg(await genImg(image, size, 1, false));
+  await printImg(await genImg(image, size, 2 ** (- 5), true));
 };
+
+/* let genImg3 = async (image, size, loss, dct = true, d2 = false) => {
+  let counter = processCounter++;
+  let sourcerer = new Sourcerer(size, size, loss);
+
+  let imgArray = Array.from(sourcerer.imgLib.toBitMap(image, size, size));
+
+  let rgb = [{ A: [] }, { A: [] }, { A: [] }];
+  for (let i = 0; i < imgArray.length; i+=4) {
+    rgb[0].A.push(imgArray[i]);
+    rgb[1].A.push(imgArray[i + 1]);
+    rgb[2].A.push(imgArray[i + 2]);
+  }
+
+  console.time('process_' + counter);
+  console.time('compression_' + counter);
+  console.log('%cstart decomposing', 'color: #6f6fff');
+
+  for (let c = 0; c < 3; c++) {
+    if (d2) {
+      let imgMatrix = new Array(size).fill(0).map((e, i) => new Array(size).fill(0).map((e, j) => rgb[c].A[i * size + j]));
+      console.log(imgMatrix);
+      rgb[c].F = await sourcerer.fourier.DCT2D(imgMatrix, loss);
+    } else if (dct) {
+      rgb[c].F = await sourcerer.fourier.lossyDCT(rgb[c].A, loss);
+    } else {
+      rgb[c].F = await sourcerer.fourier.lossyFFT(rgb[c].A, [], loss);
+    }
+  }
+
+
+
+  console.log('%cfinished decomposing', 'color: #6f6fff');
+  console.timeEnd('compression_' + counter);
+
+  console.time('extraction_' + counter);
+  console.log('%cstarting extraction', 'color: #ff6f6f');
+
+  for (let c = 0; c < 3; c++) {
+    if (d2) {
+      rgb[c].C = await sourcerer.fourier.IDCT2D(rgb[c].F, size, size);
+      rgb[c].C = await rgb[c].C.flat();
+      console.log(rgb[c].C);
+    } else if (dct) {
+      rgb[c].C = await sourcerer.fourier.IDCT(rgb[c].F, rgb[c].A.length);
+    } else {
+      rgb[c].C = (await sourcerer.fourier.IFFT(rgb[c].F, rgb[c].A.length)).R;
+    }
+  }
+
+  let compressedArray = [];
+  for (let i = 0; i < rgb[0].C.length; i++) compressedArray.push(rgb[0].C[i], rgb[1].C[i], rgb[2].C[i], 255);
+  console.log('%cfinished extraction', 'color: #ff6f6f');
+  console.timeEnd('extraction_' + counter);
+  console.timeEnd('process_' + counter);
+
+  console.log(compressedArray);
+
+  console.log(imgArray.length, compressedArray.length);
+
+  return await sourcerer.imgLib.fromBitMap(compressedArray, size, size);
+}
+*/
 
