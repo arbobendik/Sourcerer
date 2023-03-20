@@ -42,6 +42,7 @@ export class Fourier {
                 filteredF.F.push(i);
             }
         }
+        filteredF.original = f;
         return filteredF;
     }
 
@@ -69,20 +70,23 @@ export class Fourier {
         // Obtain the minimum amplitude for a frequency to be in the 1 - loss most relevant curves
         const threshold = Math.max(reals.sort((a, b) => a - b)[Math.round((reals.length - 1) * (1 - loss))], Math.BIAS);
         let filteredDCT = {R: [], F: []};
+
+        let underLimit = 0;
+        for (let i = 0; i < dct.length; i++) if (Math.abs(dct[i]) > threshold) underLimit ++;
+        let allowedOnThreshold = 1 + Math.round((reals.length - 1) * loss) - underLimit;
         // Filter out all curves with lesser amplitude (in this case real part) than threshold
-        let onThreshold = [];
         for (let i = 0; i < dct.length; i++) {
             if (Math.abs(dct[i]) > threshold) {
                 filteredDCT.R.push(dct[i]);
                 filteredDCT.F.push(i);
-            } else if (Math.abs(dct[i]) === threshold) onThreshold.push(i);
+            } else if (Math.abs(dct[i]) === threshold && allowedOnThreshold > 0) {
+                allowedOnThreshold --;
+                filteredDCT.R.push(dct[i]);
+                filteredDCT.F.push(i);
+            }
         }
 
-        for (let i = 0; i + filteredDCT.R.length < Math.round((reals.length - 1) * loss); i++) {
-            filteredDCT.R.push(dct[onThreshold[i]]);
-            filteredDCT.F.push(onThreshold[i]);
-        }
-
+        filteredDCT.original = dct;
         return filteredDCT;
     }
 
