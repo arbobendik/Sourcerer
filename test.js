@@ -16,73 +16,71 @@ let printImg = async (image) => {
   });
 }
 
-let genImg = async (image, size, loss, dct = true) => {
-  let counter = processCounter++;
-  let sourcerer = new Sourcerer(size, size, loss);
-
-  let imgArray = Array.from(sourcerer.imgLib.toBitMap(image, size, size));
-
-  console.time('process_' + counter);
-  console.time('compression_' + counter);
-  console.log('%cstart decomposing', 'color: #6f6fff');
-  let fourier;
-  if (dct) {
-    fourier = await sourcerer.fourier.lossyDCT(imgArray, loss)
-  } else {
-    fourier = await sourcerer.fourier.lossyFFT(imgArray, [], loss);
-  }
-  console.log('%cfinished decomposing', 'color: #6f6fff');
-  console.timeEnd('compression_' + counter);
-
-  console.log(fourier);
-
-  console.time('extraction_' + counter);
-  console.log('Compressed to a length of:', fourier.length);
-  console.log('%cstarting extraction', 'color: #ff6f6f');
-  let compressedArray;
-  if (dct) {
-    compressedArray = await sourcerer.fourier.IDCT(fourier, imgArray.length);
-  } else {
-    compressedArray = (await sourcerer.fourier.IFFT(fourier, imgArray.length)).R;
-  }
-  
-  console.log('%cfinished extraction', 'color: #ff6f6f');
-  console.timeEnd('extraction_' + counter);
-  console.timeEnd('process_' + counter);
-
-  console.log(compressedArray);
-
-  return await sourcerer.imgLib.fromBitMap(compressedArray, size, size);
-}
-
 let test1 = async (image, size, loss) => {
   let sourcerer = new Sourcerer(size, size, loss);
 
   let imgArray = Array.from(await sourcerer.imgLib.toBitMap(image, size, size));
-  console.log(imgArray);
+  // console.log(imgArray);
   // DCT transform image
-  let lossyDCT = (await sourcerer.fourier.lossyDCT(imgArray, 1.0)).R;
-  console.log(lossyDCT);
-
-  for (let i = 0; i < 300; i++) await sourcerer.train(lossyDCT);
+  let lossyDCT = await sourcerer.fourier.lossyDCT(imgArray, loss);
   
-  let upscaledDCT = await sourcerer.upscale(imgArray, imgArray.length);
+  for (let i = 0; i < 100; i++) await sourcerer.train(lossyDCT);
+  
+  let upscaledDCT = await sourcerer.upscale(lossyDCT, lossyDCT.original.length);
+  console.log(lossyDCT.original);
   console.log(upscaledDCT);
 
   let upscaledImg = await sourcerer.fourier.IDCT({R: upscaledDCT}, imgArray.length);
-  console.log(upscaledImg);
+  // console.log(upscaledImg);
 
   printImg(await sourcerer.imgLib.fromBitMap(imgArray, size, size));
   printImg(await sourcerer.imgLib.fromBitMap(upscaledImg, size, size));
+}
+
+let test2 = async (image, size, loss) => {
+  let sourcerer = [new Sourcerer(size, size, loss), new Sourcerer(size, size, loss), new Sourcerer(size, size, loss)];
+
+  let imgArray = Array.from(await sourcerer[0].imgLib.toBitMap(image, size, size));
+  let rgb = [[], [], []];
+  for(let i = 0; i < imgArray.length; i++) {
+    let im4 = i % 4;
+    if (im4 !== 3) rgb[im4].push(imgArray[i]);
+  }
+  // console.log(imgArray);
+  // DCT transform image
+  let lossyDCT = new Array(3)
+  for (let i = 0; i < 3; i++) lossyDCT[i] = await sourcerer[i].fourier.lossyDCT(rgb[i], loss);
+  console.log(lossyDCT);
+  
+  for (let i = 0; i < 50; i++) {
+    for (let j = 0; j < 3; j++) await sourcerer[j].train(lossyDCT[j]);
+  }
+  
+  let upscaledDCT = new Array(3)
+  for (let i = 0; i < 3; i++) upscaledDCT[i] = await sourcerer[i].upscale(lossyDCT[i], lossyDCT[i].original.length);
+  console.log(upscaledDCT);
+
+  let upscaledImg = new Array(3)
+  for (let i = 0; i < 3; i++) upscaledImg[i] = await sourcerer[i].fourier.IDCT({R: upscaledDCT[i]}, rgb[i].length);
+  // console.log(upscaledImg);
+  let upscaledImgArray = new Array (imgArray.length);
+  for (let i = 0; i < imgArray.length; i++) {
+    let im4 = i % 4;
+    if (im4 === 3) upscaledImgArray[i] = 0;
+    else upscaledImgArray[i] = upscaledImg[im4][Math.floor(i / 4)];
+  }
+
+  printImg(await sourcerer[0].imgLib.fromBitMap(imgArray, size, size));
+  printImg(await sourcerer[0].imgLib.fromBitMap(upscaledImgArray, size, size));
 }
 
 let image = new Image();
 image.src = 'images/erina.jpg';
 
 image.onload = async () => {
-  let size = 16;
+  let size = 64;
   // await printImg(await genImg(image, 512, 2 ** (- 5), true));
-  await test1(image, size, 1);
+  await test1(image, size, 1 / 32);
 };
 
 /*

@@ -64,6 +64,6 @@ let FFT = async (real, img, step, offset, length, inverse, depth, isThread) => {
 }
 
 self.onmessage = (e) => {
-    console.log('Spawning new thread %cdepth: %c' + e.data.depth, 'color: #8855ee', 'color: #00aaff');
+    // console.log('Spawning new thread %cdepth: %c' + e.data.depth, 'color: #8855ee', 'color: #00aaff');
     FFT(e.data.real, e.data.img, e.data.step, e.data.offset, e.data.length, e.data.inverse, e.data.depth, true); 
 }
